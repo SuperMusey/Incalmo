@@ -82,7 +82,7 @@ class C2ApiClient:
             raise Exception("No command ID received from server")
 
         # Poll for results
-        max_attempts = 30  # 30 seconds timeout
+        max_attempts = 45  # 30 seconds timeout
         poll_interval = 1  # 1 second between polls
 
         for _ in range(max_attempts):
