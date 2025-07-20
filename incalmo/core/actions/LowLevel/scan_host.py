@@ -48,13 +48,13 @@ class ScanHost(LowLevelAction):
                         if svc is not None and svc.get("name") and portid:
                             port_num = int(portid)
                             service_name = svc.get("name")
-                            
+
                             if service_name:  # Make sure service_name is not None
                                 # Check if service uses SSL/TLS
                                 tunnel = svc.get("tunnel")
                                 if tunnel == "ssl":
                                     service_name += "+ssl"  # Mark SSL services
-                                    
+
                                 services[port_num] = service_name
 
             services_by_host[ip] = services

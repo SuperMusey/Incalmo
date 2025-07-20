@@ -17,7 +17,6 @@ class NiktoScan(LowLevelAction):
         self.port = port
         self.service = service
 
-        
         command = f"nikto -h {host} -p {port} -maxtime 10s -timeout 3"
         super().__init__(agent, command)
 

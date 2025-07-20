@@ -66,14 +66,13 @@ class Scan(HighLevelAction):
         for event in events:
             if isinstance(event, ServicesDiscoveredOnHost):
                 for port, service in event.services.items():
-          
                     if "http" in service:
                         # Check if this is an SSL service
                         is_ssl = "+ssl" in service or "https" in service
-                        
+
                         if is_ssl:
                             continue
-                            
+
                         vuln_event = await low_level_action_orchestrator.run_action(
                             NiktoScan(scan_agent, event.host_ip, port, service), context
                         )
