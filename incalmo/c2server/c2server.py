@@ -196,7 +196,6 @@ def beacon():
 
             command_results[command_id].result = result
             command_results[command_id].status = CommandStatus.COMPLETED
-            
     # Get next command from queue if available
     instructions = []
     if command_queues[paw]:
