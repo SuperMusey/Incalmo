@@ -12,29 +12,29 @@ done
 echo "Redis is ready!"
 
 if [ "$MODE" == "openstack" ]; then
-# Copy the key to the first VM (192.168.1.234)
-scp -i /root/perry_key.pem -o StrictHostKeyChecking=no /root/perry_key.pem root@192.168.1.234:/root/perry_key.pem
-echo "Key copied to first VM."
+  # Copy the key to the first VM (192.168.1.234)
+  scp -i /root/perry_key.pem -o StrictHostKeyChecking=no /root/perry_key.pem root@192.168.1.234:/root/perry_key.pem
+  echo "Key copied to first VM."
 
-# Copy the agent to the first VM (192.168.1.234)
-scp -i /root/perry_key.pem -o StrictHostKeyChecking=no /agents/sandcat.go root@192.168.1.234:/root/sandcat.go
-echo "Agent copied to first VM."
+  # Copy the agent to the first VM (192.168.1.234)
+  scp -i /root/perry_key.pem -o StrictHostKeyChecking=no /agents/sandcat.go root@192.168.1.234:/root/sandcat.go
+  echo "Agent copied to first VM."
 
-# Copy the agent to the second VM (192.168.202.100) via the first VM
-ssh -i /root/perry_key.pem -o StrictHostKeyChecking=no root@192.168.1.234 \
-  "scp -i /root/perry_key.pem -o StrictHostKeyChecking=no /root/sandcat.go root@192.168.202.100:/tmp/"
-echo "Agent copied to second VM."
+  # Copy the agent to the second VM (192.168.202.100) via the first VM
+  ssh -i /root/perry_key.pem -o StrictHostKeyChecking=no root@192.168.1.234 \
+    "scp -i /root/perry_key.pem -o StrictHostKeyChecking=no /root/sandcat.go root@192.168.202.100:/tmp/"
+  echo "Agent copied to second VM."
 
-# Start the agent on the second VM (192.168.202.100) via the first VM
-ssh -i /root/perry_key.pem -o StrictHostKeyChecking=no root@192.168.1.234 \
-  "ssh -i /root/perry_key.pem -o StrictHostKeyChecking=no root@192.168.202.100 'nohup /tmp/sandcat.go -server http://$SERVER_IP:8888 -group red > /tmp/agent.log 2>&1 &'"
-echo "Agent started on second VM."
-
+  # Start the agent on the second VM (192.168.202.100) via the first VM
+  ssh -i /root/perry_key.pem -o StrictHostKeyChecking=no root@192.168.1.234 \
+    "ssh -i /root/perry_key.pem -o StrictHostKeyChecking=no root@192.168.202.100 'nohup /tmp/sandcat.go -server http://$SERVER_IP:8888 -group red > /tmp/agent.log 2>&1 &'"
+  echo "Agent started on second VM."
+  
 fi
 
 if [ "$MODE" == "docker" ]; then
-cd /agents
-./sandcat.go -server http://$SERVER_IP:8888 -group red &
+  cd /agents
+  ./sandcat.go -server http://$SERVER_IP:8888 -group red &
 fi
 
 
