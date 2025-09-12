@@ -25,7 +25,7 @@ from incalmo.core.actions import HighLevel, LowLevel
 from incalmo.core.actions.high_level_action import HighLevelAction
 from incalmo.core.actions.low_level_action import LowLevelAction
 from incalmo.core.models.events import BashOutputEvent
-from config.attacker_config import AttackerConfig
+from config.attacker_config import AttackerConfig, LLMStrategyConfig
 
 from abc import ABC, abstractmethod
 
@@ -40,6 +40,11 @@ class LLMStrategy(IncalmoStrategy, ABC):
         super().__init__(config, **kwargs)
         self.logger = self.logging_service.setup_logger(logger_name="llm")
         self.agent_logger = self.logging_service.setup_logger(logger_name="llm_agent")
+
+        if not isinstance(self.config.strategy, LLMStrategyConfig):
+            raise ValueError("Strategy must be an instance of LLMStrategy")
+
+        self.abstraction = self.config.strategy.abstraction
 
         # LLM Agent Interface and registry
         self.agent_interface = LLMAgentInterface(
@@ -67,7 +72,7 @@ class LLMStrategy(IncalmoStrategy, ABC):
 
     async def finished_cb(self):
         # Log exfiltrated data for non high level abstractions
-        if self.config.strategy.abstraction != AbstractionLevel.INCALMO:
+        if self.abstraction != AbstractionLevel.INCALMO:
             for host in self.initial_hosts:
                 agent = host.get_agent()
                 if agent:
@@ -118,7 +123,7 @@ class LLMStrategy(IncalmoStrategy, ABC):
 
         new_perr_reponse = ""
         if llm_action is None:
-            if self.config.strategy.abstraction == AbstractionLevel.SHELL:
+            if self.abstraction == AbstractionLevel.SHELL:
                 new_perr_reponse = (
                     "No <shell> tag found. Please try again and include a tag."
                 )
@@ -171,7 +176,7 @@ class LLMStrategy(IncalmoStrategy, ABC):
                     )
 
                 current_response += get_infection_summary_str(
-                    self.environment_state_service, self.config.strategy.abstraction
+                    self.environment_state_service, self.abstraction
                 )
 
                 current_response += "\nThe actions had the following events: \n"

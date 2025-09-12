@@ -2,7 +2,7 @@ import os
 
 from abc import ABC, abstractmethod
 
-from config.attacker_config import AbstractionLevel, AttackerConfig
+from config.attacker_config import AbstractionLevel, AttackerConfig, LLMStrategyConfig
 
 from incalmo.core.strategies.llm.llm_response import (
     LLMResponse,
@@ -68,6 +68,11 @@ class LLMInterface(ABC):
         config: AttackerConfig,
     ):
         self.logger = logger
+
+        if not isinstance(config.strategy, LLMStrategyConfig):
+            raise ValueError("Strategy must be an instance of LLMStrategy")
+
+        self.abstraction = config.strategy.abstraction
 
         # Path of current file
         current_file = os.path.abspath(__file__)
