@@ -5,6 +5,7 @@ Handles agent registration, management, and deletion.
 
 import json
 import uuid
+from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
 
 from incalmo.models.instruction import Instruction
@@ -20,6 +21,8 @@ from incalmo.c2server.shared import (
     read_template_file,
     PAYLOADS_DIR,
 )
+from incalmo.models.agent import Agent
+from incalmo.c2server.shared import AGENT_TIMEOUT_SECONDS
 
 # Create blueprint
 agent_bp = Blueprint("agent", __name__)
@@ -30,27 +33,29 @@ def beacon():
     """Agent check-in endpoint."""
     data = request.data
     decoded_data = decode_base64(data)
-    json_data = json.loads(decoded_data)
+    raw_agent_data = json.loads(decoded_data)
 
-    paw = json_data.get("paw")
-    results = json_data.get("results", [])
+    paw = raw_agent_data.get("paw")
+    results = raw_agent_data.get("results", [])
 
     if not paw:
         paw = str(uuid.uuid4())[:8]
 
     # Store agent info if new
-    required_fields = ["host_ip_addrs"]
     if paw not in agents and paw not in agent_deletion_queue:
-        # Validate all required fields are present and not None
-        if all(json_data.get(field) not in (None, "", []) for field in required_fields):
-            print(f"New agent: {paw}")
-            agents[paw] = {"paw": paw, "info": data, "infected_by": None}
-        else:
-            print(
-                f"[ERROR] Agent {paw} missing required fields, not adding: "
-                f"{ {field: json_data.get(field) for field in required_fields} }"
-            )
-            return jsonify({"error": "Agent missing required fields"}), 400
+        print(f"New agent: {paw}")
+        agents[paw] = Agent(
+            paw=paw,
+            username=raw_agent_data.get("username"),
+            privilege=raw_agent_data.get("privilege"),
+            pid=raw_agent_data.get("pid"),
+            host_ip_addrs=raw_agent_data.get("host_ip_addrs"),
+            hostname=raw_agent_data.get("host"),
+        )
+
+    # Update last beacon time for existing agents
+    if paw in agents:
+        agents[paw].last_beacon = datetime.now()
 
     # Process any results from previous commands
     for result in results:
@@ -90,19 +95,9 @@ def beacon():
 @agent_bp.route("/agents", methods=["GET"])
 def get_agents():
     """Get list of all connected agents."""
-    agents_list = {}
-    for paw, data in agents.items():
-        decoded_info = decode_base64(data["info"])
-        parsed_info = json.loads(decoded_info)
-
-        agents_list[paw] = {
-            "paw": paw,
-            "username": parsed_info.get("username"),
-            "privilege": parsed_info.get("privilege"),
-            "pid": parsed_info.get("pid"),
-            "host_ip_addrs": parsed_info.get("host_ip_addrs"),
-            "host": parsed_info.get("host"),
-        }
+    agents_list = []
+    for paw, agent in agents.items():
+        agents_list.append(agent.model_dump())
 
     return jsonify(agents_list)
 
@@ -114,9 +109,8 @@ def delete_agent(paw):
         return jsonify({"error": "Agent not found"}), 404
 
     # Queue a kill command for the agent
-    decoded_info = decode_base64(agents[paw]["info"])
-    agent_info = json.loads(decoded_info)
-    agent_pid = agent_info.get("pid")
+    agent = agents[paw]
+    agent_pid = agent.pid
 
     kill_command = f"(sleep 3 && kill -9 {agent_pid}) &"
     exec_template = read_template_file("Exec_Bash_Template.sh")
@@ -147,3 +141,27 @@ def delete_agent(paw):
     agent_deletion_queue.add(paw)
 
     return jsonify({"message": f"Agent {paw} deleted successfully"}), 200
+
+
+@agent_bp.route("/agents/cleanup", methods=["POST"])
+def cleanup_stale_agents_manual():
+    """Remove agents that haven't beaconed within the timeout period (in-process)."""
+    current_time = datetime.now()
+    cutoff_time = current_time - timedelta(seconds=AGENT_TIMEOUT_SECONDS)
+
+    stale_agents: list[str] = []
+
+    for paw, agent_data in agents.items():
+        last_beacon = agent_data.last_beacon
+        if last_beacon < cutoff_time:
+            stale_agents.append(paw)
+
+    for paw in stale_agents:
+        if paw in agents:
+            del agents[paw]
+        if paw in command_queues:
+            del command_queues[paw]
+        if paw in agent_deletion_queue:
+            agent_deletion_queue.remove(paw)
+
+    return jsonify({"message": "Stale agents cleaned up successfully"}), 200
