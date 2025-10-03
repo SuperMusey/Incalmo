@@ -1,55 +1,48 @@
 import json
 import os
+import sqlite3
 from typing import Any, Optional
-
-from redis import Redis
 
 
 class StateStore:
-    _redis_client: Optional[Redis] = None
-    _memory_cache: dict[str, Any] = {"environment:hosts": []}
+    TABLE_NAME = "environment"
+    DB_PATH = "state_store.db"
+    _db_connection: Optional[sqlite3.Connection] = None
 
     @classmethod
-    def _get_redis_client(cls) -> Optional[Redis]:
-        if cls._redis_client is not None:
-            return cls._redis_client
-
-        # Prefer explicit state store URL, then Celery backend/broker, then default
-        redis_url = (
-            os.environ.get("STATE_REDIS_URL")
-            or os.environ.get("result_backend")
-            or os.environ.get("broker_url")
-            or "redis://localhost:6379/0"
-        )
-
-        client = Redis.from_url(redis_url, decode_responses=True)
-        # Validate connection
-        client.ping()
-        cls._redis_client = client
-        return cls._redis_client
+    def initialize(cls) -> None:
+        "Delete existing DB file and create a new one."
+        if os.path.exists(cls.DB_PATH):
+            os.remove(cls.DB_PATH)
 
     @classmethod
     def set_hosts(cls, hosts: list[dict]) -> None:
-        client = cls._get_redis_client()
-        if client is not None:
-            client.set("environment:hosts", json.dumps(hosts))
-            return
-        cls._memory_cache["environment:hosts"] = hosts
+        cls._db_connection = sqlite3.connect(cls.DB_PATH)
+        cursor = cls._db_connection.cursor()
+        cursor.execute(
+            f"""
+            CREATE TABLE IF NOT EXISTS {cls.TABLE_NAME} (
+                host_id TEXT PRIMARY KEY,
+                host TEXT
+            )
+            """
+        )
+        for host in hosts:
+            cursor.execute(
+                f"""
+                INSERT OR REPLACE INTO {cls.TABLE_NAME} (host_id, host)
+                VALUES (?, ?)
+                """,
+                (host.get("host_id"), json.dumps(host)),
+            )
+        cls._db_connection.commit()
 
     @classmethod
     def get_hosts(cls) -> list[dict]:
-        client = cls._get_redis_client()
-        if client is not None:
-            data = client.get("environment:hosts")
-            if not data:
-                return []
-
-            if isinstance(data, (bytes, bytearray)):
-                return json.loads(data.decode("utf-8"))
-            if isinstance(data, str):
-                return json.loads(data)
-            # Fallback: attempt to coerce to string
-            return json.loads(str(data))
-
-        cached = cls._memory_cache.get("environment:hosts", [])
-        return cached if isinstance(cached, list) else []
+        if cls._db_connection is None:
+            cls._db_connection = sqlite3.connect(cls.DB_PATH)
+        cursor = cls._db_connection.cursor()
+        cursor.execute(f"SELECT host from {cls.TABLE_NAME}")
+        rows = cursor.fetchall()
+        cls._db_connection.commit()
+        return [json.loads(row[0]) for row in rows]
