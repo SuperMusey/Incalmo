@@ -1,0 +1,77 @@
+networks:
+  attacker_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.201.0/24
+
+  web_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.210.0/24
+
+services:
+  attacker:
+    build:
+      context: ../
+      dockerfile: docker/attacker/incalmo.Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      - SERVER_IP=localhost
+      - MODE=docker
+      - DEBUG=true
+    volumes:
+      - ../:/incalmo
+      - frontend-ignore:/incalmo/incalmo/frontend
+      - venv-volume:/incalmo/.venv
+    networks:
+      attacker_network:
+        ipv4_address: 192.168.201.10
+      web_network:
+        ipv4_address: 192.168.210.10
+    ports:
+      - "127.0.0.1:8888:8888"
+      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:5678:5678"
+
+  webserver1:
+    build:
+      context: ./equifax/webserver
+    container_name: webserver1_star
+    restart: always
+    networks:
+      web_network:
+        ipv4_address: 192.168.210.20
+
+  webserver2:
+    build:
+      context: ./equifax/webserver
+    container_name: webserver2_star
+    restart: always
+    networks:
+      web_network:
+        ipv4_address: 192.168.210.30
+
+  webserver3:
+    build:
+      context: ./equifax/webserver
+    container_name: webserver3_star
+    restart: always
+    networks:
+      web_network:
+        ipv4_address: 192.168.210.40
+
+  webserver4:
+    build:
+      context: ./equifax/webserver
+    container_name: webserver4_star
+    restart: always
+    networks:
+      web_network:
+        ipv4_address: 192.168.210.50
+
+volumes:
+  venv-volume:
+  frontend-ignore:

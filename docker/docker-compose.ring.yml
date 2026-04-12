@@ -1,0 +1,121 @@
+networks:
+  attacker_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.202.0/24
+
+  ring_1_2:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.203.0/24
+
+  ring_2_3:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.204.0/24
+
+  ring_3_4:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.205.0/24
+
+  ring_4_5:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.206.0/24
+
+  ring_5_1:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.207.0/24
+
+services:
+  attacker:
+    build:
+      context: ../
+      dockerfile: docker/attacker/incalmo.Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      - SERVER_IP=localhost
+      - MODE=docker
+      - DEBUG=true
+    volumes:
+      - ../:/incalmo
+      - frontend-ignore:/incalmo/incalmo/frontend
+      - venv-volume:/incalmo/.venv
+    networks:
+      attacker_network:
+        ipv4_address: 192.168.202.10
+      ring_1_2:
+        ipv4_address: 192.168.203.10
+    ports:
+      - "127.0.0.1:8888:8888"
+      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:5678:5678"
+
+  webserver1:
+    build:
+      context: ./equifax/webserver
+    container_name: webserver1_ring
+    restart: always
+    networks:
+      ring_1_2:
+        ipv4_address: 192.168.203.20
+      ring_5_1:
+        ipv4_address: 192.168.207.20
+
+
+  webserver2:
+    build:
+      context: ./equifax/webserver
+    container_name: webserver2_ring
+    restart: always
+    networks:
+      ring_1_2:
+        ipv4_address: 192.168.203.30
+      ring_2_3:
+        ipv4_address: 192.168.204.20
+
+  webserver3:
+    build:
+      context: ./equifax/webserver
+    container_name: webserver3_ring
+    restart: always
+    networks:
+      ring_2_3:
+        ipv4_address: 192.168.204.30
+      ring_3_4:
+        ipv4_address: 192.168.205.20
+
+  webserver4:
+    build:
+      context: ./equifax/webserver
+    container_name: webserver4_ring
+    restart: always
+    networks:
+      ring_3_4:
+        ipv4_address: 192.168.205.30
+      ring_4_5:
+        ipv4_address: 192.168.206.20
+
+  webserver5:
+    build:
+      context: ./equifax/webserver
+    container_name: webserver5_ring
+    restart: always
+    networks:
+      ring_4_5:
+        ipv4_address: 192.168.206.30
+      ring_5_1:
+        ipv4_address: 192.168.207.30
+
+volumes:
+  venv-volume:
+  frontend-ignore:

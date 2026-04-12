@@ -46,8 +46,6 @@ services:
         ipv4_address: 192.168.199.20
       web_network:
         ipv4_address: 192.168.200.20
-    ports:
-      - "127.0.0.1:8080:8080"
 
 volumes:
   venv-volume:
