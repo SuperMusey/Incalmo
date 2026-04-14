@@ -19,7 +19,7 @@ class NucleiScan(LowLevelAction):
         self.port = port
         self.service = service
 
-        command = f"nuclei -u {host}:{port} -timeout 5 -severity critical -j -silent"
+        command = f"nuclei -u {host}:{port} -timeout 5 -severity medium,high,critical -j -silent"
         super().__init__(agent, command)
 
     async def get_result(

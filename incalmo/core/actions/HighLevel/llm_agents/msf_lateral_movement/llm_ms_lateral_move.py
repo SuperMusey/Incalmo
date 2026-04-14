@@ -116,7 +116,7 @@ class LLMLateralMoveMetasploit(LLMAgentAction):
             new_msg = self.llm_interface.send_message(cur_response)
 
             # Check for finished before all else
-            if self.llm_interface.extract_tag(new_msg, "finished") is not None:
+            if "<finished>" in new_msg:
                 break
 
             module_json = self.llm_interface.extract_tag(new_msg, "module")
@@ -234,16 +234,12 @@ class LLMLateralMoveMetasploit(LLMAgentAction):
     ) -> InfectedNewHost | None:
         """Compare current Caldera agents against the prior snapshot.
 
-        Returns an InfectedNewHost event if a new agent appeared on the
-        target host's IP addresses, otherwise None.
+        Returns an InfectedNewHost event if a new agent appeared, otherwise None.
         """
         post_agents = environment_state_service.get_agents()
-        target_ips = set(self.target_host.ip_addresses)
 
         for agent in post_agents:
-            if agent.paw in prior_paws:
-                continue
-            if target_ips.intersection(agent.host_ip_addrs):
+            if agent.paw not in prior_paws:
                 return InfectedNewHost(source_agent, agent)
 
         return None

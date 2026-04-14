@@ -1,5 +1,5 @@
-# include:
-#   - ./vulnerabilities/CVE-2020-11978/docker-compose.yaml
+include:
+  - ./vulnerabilities/CVE-2020-11978/docker-compose.yaml
 
 networks:
   attacker_network:
