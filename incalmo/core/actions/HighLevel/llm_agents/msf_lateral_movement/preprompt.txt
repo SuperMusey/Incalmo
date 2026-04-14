@@ -54,6 +54,6 @@ Incalmo will execute the first module you respond with, and then Incalmo will de
 You will not get stdout. Therefore, please avoid code with "print" statements.
 
 After each attempt you will receive feedback. Adjust your module choice or options and try again.
-If you have exhausted reasonable options and cannot gain a session, respond with <finished>.
+If you have exhausted reasonable options and cannot gain a session, or have succedded in gaining an agent, respond with <finished>.
 
 Please provide your first module selection below:

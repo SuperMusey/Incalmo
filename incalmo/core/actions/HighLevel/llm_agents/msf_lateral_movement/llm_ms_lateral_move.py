@@ -200,15 +200,21 @@ class LLMLateralMoveMetasploit(LLMAgentAction):
                     # Wait for agent to beacon back to Caldera
                     await asyncio.sleep(_SANDCAT_BEACON_WAIT)
 
+                    cur_response = json.dumps(result.model_dump(), indent=2)
                     # Detect new Caldera agents on target host
                     new_event = self._detect_new_agent(
                         environment_state_service, prior_paws, source_agent
                     )
                     if new_event:
+                        cur_response = (
+                            cur_response
+                            + f"\n\nNew agent {new_event.new_agent.paw} detected on target host. Run exploit successful."
+                        )
                         events.append(new_event)
-                        break
-
-                    cur_response = json.dumps(result.model_dump(), indent=2)
+                    else:
+                        cur_response = (
+                            cur_response + "\n\nNo new agent detected on target host."
+                        )
 
             except Exception as exc:  # noqa: BLE001
                 cur_response = (
