@@ -1,3 +1,6 @@
+# include:
+#   - ./vulnerabilities/CVE-2020-11978/docker-compose.yaml
+
 networks:
   attacker_network:
     driver: bridge
@@ -42,10 +45,9 @@ services:
     container_name: webserver_container
     restart: always
     networks:
-      attacker_network:
-        ipv4_address: 192.168.199.20
       web_network:
         ipv4_address: 192.168.200.20
+  
 
 volumes:
   venv-volume:
